@@ -21,7 +21,7 @@ image_points = []
 object_points = []
 
 # 影像路径
-image_paths = glob.glob('dataset/resized/*.JPG')
+image_paths = glob.glob('dataset/original/*.JPG')
 image_size = None
 
 for image_path in image_paths:
@@ -46,6 +46,9 @@ for image_path in image_paths:
         cv2.imwrite('processing.jpg', image)
         cv2.waitKey(200)
 
+    else:
+        print "One Chessboard Not Detectable!"
+
 cv2.destroyAllWindows()
 
 # calibrateCamera相机检校
@@ -64,7 +67,7 @@ print "\n\n------Translation Vector:------\n"
 print tvecs
 
 # 利用获取的检校参数对拍摄影像进行纠正
-image_before_undistort = cv2.imread('dataset/resized/IMG_2369.JPG')
+image_before_undistort = cv2.imread('dataset/original/IMG_2369.JPG')
 h, w = image_before_undistort.shape[:2]
 new_camera_matrix, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 image_after_undistort = cv2.undistort(image_before_undistort, mtx, dist, None, new_camera_matrix)
@@ -72,3 +75,15 @@ image_after_undistort = cv2.undistort(image_before_undistort, mtx, dist, None, n
 x, y, w, h = roi
 image_after_undistort = image_after_undistort[y:y + h, x:x + w]
 cv2.imwrite('result.jpg', image_after_undistort)
+
+# 重新投影回去，评定精度
+total_error = 0
+for i in xrange(len(object_points)):
+    img_points2, _ = cv2.projectPoints(object_points[i], rvecs[i], tvecs[i], mtx, dist)
+    error = cv2.norm(image_points[i], img_points2, cv2.NORM_L2) / len(img_points2)
+    total_error += error
+
+# 输出总误差和平均误差
+mean_error = total_error / len(object_points)
+print "\n\n------total error:------\n\n", total_error
+print "\n\n------mean error:------\n\n", mean_error
